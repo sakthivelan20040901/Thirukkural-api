@@ -150,21 +150,6 @@ GET /section?section=virtue
 
 ---
 
-## 🧑‍💻 Local Setup
-
-```bash
-git clone https://github.com/sakthivelan20040901/Thirukkural-api.git
-cd Thirukkural-api
-
-python3 -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-uvicorn main:app --reload
-```
-
----
 
 ## 📈 Use Cases
 
