@@ -2,16 +2,23 @@ from fastapi import FastAPI, HTTPException, Query
 import json
 import random
 from datetime import date
+import os
 
 app = FastAPI(title="Thirukkural API")
 
-# Load JSON
-with open("/home/sakthivelan/Desktop/Thirukural/clean_thirukkural.json", encoding="utf-8") as f:
-    kurals = json.load(f)
+# ✅ Load JSON safely (works locally + cloud)
+file_path = os.path.join(os.path.dirname(__file__), "clean_thirukkural.json")
 
+try:
+    with open(file_path, encoding="utf-8") as f:
+        kurals = json.load(f)
+except FileNotFoundError:
+    raise Exception("❌ clean_thirukkural.json file not found")
+
+# Fast lookup
 kural_dict = {k["id"]: k for k in kurals}
 
-TOTAL_KURALS = len(kurals)  # 1330
+TOTAL_KURALS = len(kurals)
 TOTAL_CHAPTERS = 133
 
 
@@ -20,6 +27,7 @@ TOTAL_CHAPTERS = 133
 def home():
     return {
         "message": "Thirukkural API is running",
+        "total_kurals": TOTAL_KURALS,
         "endpoints": [
             "/kural/{id}",
             "/kural?chapter=1",
@@ -38,49 +46,50 @@ def home():
 @app.get("/kural/{id}")
 def get_kural(id: int):
     if id < 1 or id > TOTAL_KURALS:
-        raise HTTPException(400, "Invalid Kural ID")
-    return kural_dict[id]
+        raise HTTPException(status_code=400, detail="Invalid Kural ID")
+
+    return kural_dict.get(id)
 
 
-# ✅ 2. Get Kurals by Chapter (basic)
+# ✅ 2. Get Kurals by Chapter
 @app.get("/kural")
 def get_by_chapter(chapter: int = Query(...)):
     if chapter < 1 or chapter > TOTAL_CHAPTERS:
-        raise HTTPException(400, "Invalid chapter")
+        raise HTTPException(status_code=400, detail="Invalid chapter")
 
     start = (chapter - 1) * 10
     end = start + 10
 
     return {
         "chapter": chapter,
+        "count": len(kurals[start:end]),
         "data": kurals[start:end]
     }
 
 
-# ✅ 3. ⭐ Get Chapter Details (NEW)
+# ✅ 3. Get Chapter Details
 @app.get("/chapters/{chapter_id}")
 def get_chapter_details(chapter_id: int):
     if chapter_id < 1 or chapter_id > TOTAL_CHAPTERS:
-        raise HTTPException(400, "Invalid chapter")
+        raise HTTPException(status_code=400, detail="Invalid chapter")
 
     start = (chapter_id - 1) * 10
     end = start + 10
     chapter_kurals = kurals[start:end]
 
-    # Take chapter name from first kural
-    chapter_name_en = chapter_kurals[0]["chapter_en"]
-    chapter_name_ta = chapter_kurals[0]["chapter_ta"]
+    if not chapter_kurals:
+        raise HTTPException(status_code=404, detail="Chapter not found")
 
     return {
         "chapter_number": chapter_id,
-        "chapter_name_en": chapter_name_en,
-        "chapter_name_ta": chapter_name_ta,
+        "chapter_name_en": chapter_kurals[0]["chapter_en"],
+        "chapter_name_ta": chapter_kurals[0]["chapter_ta"],
         "total_kurals": len(chapter_kurals),
         "kurals": chapter_kurals
     }
 
 
-# ✅ 4. Search (general)
+# ✅ 4. Search
 @app.get("/search")
 def search(q: str):
     q = q.strip()
