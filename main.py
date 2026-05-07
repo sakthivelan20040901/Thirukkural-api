@@ -154,3 +154,16 @@ def get_by_section(section: str):
         "count": len(results),
         "data": results
     }
+
+# ✅ 10. Tamil-only Kural
+@app.get("/tamil/{id}")
+def get_tamil_kural(id: int):
+    if id < 1 or id > TOTAL_KURALS:
+        raise HTTPException(status_code=400, detail="Invalid Kural ID")
+
+    kural = kural_dict.get(id)
+
+    return {
+        "id": kural["id"],
+        "tamil": kural["tamil"]
+    }
