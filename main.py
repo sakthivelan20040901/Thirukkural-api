@@ -1,10 +1,19 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import random
 from datetime import date
 import os
 
 app = FastAPI(title="Thirukkural API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],            # allow all origins
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # ✅ Load JSON safely (works locally + cloud)
 file_path = os.path.join(os.path.dirname(__file__), "clean_thirukkural.json")
@@ -155,6 +164,7 @@ def get_by_section(section: str):
         "data": results
     }
 
+
 # ✅ 10. Tamil-only Kural
 @app.get("/tamil/{id}")
 def get_tamil_kural(id: int):
@@ -167,3 +177,8 @@ def get_tamil_kural(id: int):
         "id": kural["id"],
         "tamil": kural["tamil"]
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
