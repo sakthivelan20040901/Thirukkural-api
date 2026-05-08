@@ -9,13 +9,13 @@ app = FastAPI(title="Thirukkural API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],            # allow all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# ✅ Load JSON safely (works locally + cloud)
+# Load JSON safely
 file_path = os.path.join(os.path.dirname(__file__), "clean_thirukkural.json")
 
 try:
@@ -24,14 +24,11 @@ try:
 except FileNotFoundError:
     raise Exception("❌ clean_thirukkural.json file not found")
 
-# Fast lookup
 kural_dict = {k["id"]: k for k in kurals}
-
 TOTAL_KURALS = len(kurals)
 TOTAL_CHAPTERS = 133
 
 
-# 🏠 Root
 @app.get("/")
 def home():
     return {
@@ -46,21 +43,19 @@ def home():
             "/search/end?q=",
             "/random",
             "/daily",
-            "/section?section=virtue"
+            "/section?section=virtue",
+            "/tamil/{id}"
         ]
     }
 
 
-# ✅ 1. Get Kural by ID
 @app.get("/kural/{id}")
 def get_kural(id: int):
     if id < 1 or id > TOTAL_KURALS:
         raise HTTPException(status_code=400, detail="Invalid Kural ID")
-
     return kural_dict.get(id)
 
 
-# ✅ 2. Get Kurals by Chapter
 @app.get("/kural")
 def get_by_chapter(chapter: int = Query(...)):
     if chapter < 1 or chapter > TOTAL_CHAPTERS:
@@ -68,7 +63,6 @@ def get_by_chapter(chapter: int = Query(...)):
 
     start = (chapter - 1) * 10
     end = start + 10
-
     return {
         "chapter": chapter,
         "count": len(kurals[start:end]),
@@ -76,7 +70,6 @@ def get_by_chapter(chapter: int = Query(...)):
     }
 
 
-# ✅ 3. Get Chapter Details
 @app.get("/chapters/{chapter_id}")
 def get_chapter_details(chapter_id: int):
     if chapter_id < 1 or chapter_id > TOTAL_CHAPTERS:
@@ -98,87 +91,59 @@ def get_chapter_details(chapter_id: int):
     }
 
 
-# ✅ 4. Search
 @app.get("/search")
 def search(q: str):
     q = q.strip()
-
     results = [
         k for k in kurals
         if q in k["tamil"] or q.lower() in k["english"].lower()
     ]
-
     return {"query": q, "count": len(results), "data": results}
 
 
-# ✅ 5. Starts with
 @app.get("/search/start")
 def search_start(q: str):
     q = q.strip()
-
-    results = [
-        k for k in kurals
-        if k["tamil"].strip().startswith(q)
-    ]
-
+    results = [k for k in kurals if k["tamil"].strip().startswith(q)]
     return {"query": q, "type": "starts_with", "count": len(results), "data": results}
 
 
-# ✅ 6. Ends with
 @app.get("/search/end")
 def search_end(q: str):
     q = q.strip()
-
-    results = [
-        k for k in kurals
-        if k["tamil"].strip().endswith(q)
-    ]
-
+    results = [k for k in kurals if k["tamil"].strip().endswith(q)]
     return {"query": q, "type": "ends_with", "count": len(results), "data": results}
 
 
-# ✅ 7. Random
 @app.get("/random")
 def random_kural():
     return random.choice(kurals)
 
 
-# ✅ 8. Daily
 @app.get("/daily")
 def daily_kural():
     index = date.today().toordinal() % TOTAL_KURALS
     return kurals[index]
 
 
-# ✅ 9. Section filter
 @app.get("/section")
 def get_by_section(section: str):
     results = [
         k for k in kurals
         if section.lower() in k["section_en"].lower()
     ]
-
-    return {
-        "section": section,
-        "count": len(results),
-        "data": results
-    }
+    return {"section": section, "count": len(results), "data": results}
 
 
-# ✅ 10. Tamil-only Kural
 @app.get("/tamil/{id}")
 def get_tamil_kural(id: int):
     if id < 1 or id > TOTAL_KURALS:
         raise HTTPException(status_code=400, detail="Invalid Kural ID")
 
     kural = kural_dict.get(id)
-
-    return {
-        "id": kural["id"],
-        "tamil": kural["tamil"]
-    }
+    return {"id": kural["id"], "tamil": kural["tamil"]}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
